@@ -5,56 +5,96 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{display:flex;align-items:center;justify-content:center;
-     background:#000 center/cover no-repeat;transition:background 0.4s}
-#f{position:relative;width:80vw;max-width:320px}
+     background:#000 center/cover no-repeat;transition:opacity .35s}
+#wrapper{position:absolute;top:25%;left:50%;transform:translateX(-50%);
+         width:80vw;max-width:320px}
 #q{width:100%;padding:14px 0;border:none;border-radius:26px;
    font:16px/1.4 sans-serif;background:rgba(0,0,0,.45);color:#fff;text-align:center;outline:none}
 #btn{position:absolute;left:10px;top:50%;transform:translateY(-50%);
      width:24px;height:24px;border:none;border-radius:50%;background:rgba(255,255,255,.25);
      color:#fff;font:12px/24px sans-serif;cursor:pointer}
-#wallBtn{position:fixed;top:12px;left:12px;padding:6px 10px;border:none;border-radius:14px;
-          font:12px sans-serif;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;z-index:9}
+#wallBtn{position:fixed;top:12px;left:12px;padding:6px 8px;border:none;border-radius:14px;
+         font:12px sans-serif;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;z-index:9}
 #wallMenu{position:fixed;top:44px;left:12px;display:none;flex-direction:column;gap:4px;z-index:9}
 #wallMenu button{padding:6px 10px;border:none;border-radius:12px;font:12px sans-serif;
                 background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+input[type=file]{display:none}
 </style>
 
-<button id="wallBtn" title="换壁纸">🎨</button>
+<!-- 壁纸菜单 -->
+<button id="wallBtn">🎨</button>
 <nav id="wallMenu">
-  <button onclick="setWall(0)">Bing 今日</button>
-  <button onclick="setWall(1)">Unsplash 随机</button>
-  <button onclick="setWall(2)">Picsum 随机</button>
-  <button onclick="setWall(3)">渐变色</button>
+  <button onclick="loadWall('bing')">Bing 随机日</button>
+  <button onclick="loadWall('unsplash')">Unsplash</button>
+  <button onclick="loadWall('picsum')">Picsum</button>
+  <button onclick="loadWall('custom')">我的图库</button>
+  <label style="padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer">
+    添加本地图
+    <input type="file" multiple accept="image/*" onchange="addCustom(this.files)">
+  </label>
 </nav>
 
-<form id="f">
-  <button id="btn" type="button">B</button>
-  <input id="q" placeholder="键入搜索…" autofocus>
-</form>
+<!-- 搜索框 -->
+<div id="wrapper">
+  <form id="f">
+    <button id="btn" type="button">B</button>
+    <input id="q" placeholder="搜索…" autofocus>
+  </form>
+</div>
 
 <script>
-/* 壁纸列表 */
-const walls = [
-  'https://bing.biturl.top/?resolution=1920&format=image',
-  'https://source.unsplash.com/1920x1080/?nature',
-  'https://picsum.photos/1920/1080',
-  ''   // 渐变色由 CSS 生成
-];
-function setWall(idx){
-  const url = idx === 3
-    ? 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)'
-    : `url(${walls[idx]})`;
-  document.body.style.background = url;
-}
-/* 引擎切换 */
-let e='https://cn.bing.com/search?q=';
-btn.onclick=_=>{
-  e=e.includes('bing')?'https://www.google.com/search?q=':'https://cn.bing.com/search?q=';
-  btn.textContent=e.includes('bing')?'B':'G';
+/* ---------- 壁纸池 ---------- */
+const src = {
+  /* 非官方镜像，支持 idx=0-7（今天→7天前） */
+  bing: () => {
+    const idx = Math.floor(Math.random()*8); // 0-7 随机历史日
+    return `https://bing.wallpaper.pics/v1?resolution=1920x1080&index=${idx}&r=${Date.now()}`;
+  },
+  unsplash: () => `https://source.unsplash.com/1920x1080?sig=${Math.random()}`,
+  picsum: () => `https://picsum.photos/1920/1080?random=${Date.now()}`,
+  custom: () => localImgs.length ? localImgs[Math.floor(Math.random()*localImgs.length)]
+                                : src.bing()
 };
-f.onsubmit=_=>{location.href=e+encodeURIComponent(q.value);return false};
 
-/* 壁纸菜单开关 */
-wallBtn.onclick=_=>wallMenu.style.display = wallMenu.style.display==='flex' ? 'none' : 'flex';
-setWall(0);   // 默认第一张
+/* ---------- 本地图库 ---------- */
+let localImgs = JSON.parse(localStorage.getItem('myWalls') || '[]');
+function addCustom(files){
+  [...files].forEach(f=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      localImgs.push(e.target.result);
+      localStorage.setItem('myWalls', JSON.stringify(localImgs));
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+/* ---------- 壁纸加载（无黑闪） ---------- */
+let cache = new Image();
+function loadWall(type){
+  const url = src[type]();
+  if(typeof url === 'string' && url.startsWith('http')){
+    cache.src = url;
+    cache.onload = ()=>document.body.style.background = `url(${url}) center/cover no-repeat`;
+  }else{
+    document.body.style.background = url;
+  }
+}
+
+/* ---------- 菜单折叠 ---------- */
+wallBtn.onclick = ()=> wallMenu.style.display = wallMenu.style.display === 'flex' ? 'none' : 'flex';
+
+/* ---------- 搜索引擎 ---------- */
+let engine = 'https://cn.bing.com/search?q=';
+btn.onclick = ()=>{
+  engine = engine.includes('bing') ? 'https://www.google.com/search?q=' : 'https://cn.bing.com/search?q=';
+  btn.textContent = engine.includes('bing') ? 'B' : 'G';
+};
+f.onsubmit = e=>{
+  e.preventDefault();
+  location.href = engine + encodeURIComponent(q.value);
+};
+
+/* 初始壁纸 */
+loadWall('bing');
 </script>
