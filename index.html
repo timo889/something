@@ -24,7 +24,7 @@ input[type=file]{display:none}
 <!-- 壁纸菜单 -->
 <button id="wallBtn">🎨</button>
 <nav id="wallMenu">
-  <button onclick="loadWall('bing')">Bing 随机日</button>
+  <button onclick="loadWall('bing')">Bing 历史</button>
   <button onclick="loadWall('picsum')">Picsum</button>
   <button onclick="loadWall('custom')">我的图库</button>
   <label style="padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer">
@@ -44,14 +44,19 @@ input[type=file]{display:none}
 <script>
 /* ---------- 壁纸池 ---------- */
 const src = {
-  /* 非官方镜像，支持 idx=0-7（今天→7天前） */
-  bing: () => {
-    const idx = Math.floor(Math.random()*8); // 0-7 随机历史日
-    return `https://bing.wdbyte.com/v1?resolution=1920x1080&index=${idx}&r=${Date.now()}`;
+  bing: async () => {
+    try {
+      const res = await fetch('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=en-US');
+      const data = await res.json();
+      const img = data.images[Math.floor(Math.random()*data.images.length)];
+      return 'https://www.bing.com' + img.url;
+    } catch {
+      return 'https://picsum.photos/1920/1080?random=' + Date.now();
+    }
   },
   picsum: () => `https://picsum.photos/1920/1080?random=${Date.now()}`,
   custom: () => localImgs.length ? localImgs[Math.floor(Math.random()*localImgs.length)]
-                                : src.bing()
+                                : 'https://picsum.photos/1920/1080?random=' + Date.now()
 };
 
 /* ---------- 本地图库 ---------- */
@@ -67,16 +72,23 @@ function addCustom(files){
   });
 }
 
-/* ---------- 壁纸加载（无黑闪） ---------- */
-let cache = new Image();
-function loadWall(type){
-  const url = src[type]();
-  if(typeof url === 'string' && url.startsWith('http')){
-    cache.src = url;
-    cache.onload = ()=>document.body.style.background = `url(${url}) center/cover no-repeat`;
-  }else{
-    document.body.style.background = url;
-  }
+/* ---------- 首次加载：0 秒黑屏 ---------- */
+(async function initWall() {
+  // 1. 先放一张同步备用图
+  document.body.style.background = 'url(https://picsum.photos/1920/1080?random=' + Date.now() + ') center/cover no-repeat';
+  // 2. 后台拉 Bing，拉到了再替换
+  const bingUrl = await src.bing();
+  const img = new Image();
+  img.src = bingUrl;
+  img.onload = () => document.body.style.background = `url(${bingUrl}) center/cover no-repeat`;
+})();
+
+/* ---------- 壁纸加载 ---------- */
+async function loadWall(type){
+  const url = type === 'bing' ? await src.bing() : src[type]();
+  const img = new Image();
+  img.src = url;
+  img.onload = () => document.body.style.background = `url(${url}) center/cover no-repeat`;
 }
 
 /* ---------- 菜单折叠 ---------- */
@@ -92,7 +104,4 @@ f.onsubmit = e=>{
   e.preventDefault();
   location.href = engine + encodeURIComponent(q.value);
 };
-
-/* 初始壁纸 */
-loadWall('bing');
 </script>
