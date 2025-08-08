@@ -47,7 +47,7 @@ const src = {
   /* 非官方镜像，支持 idx=0-7（今天→7天前） */
   bing: () => {
     const idx = Math.floor(Math.random()*8); // 0-7 随机历史日
-    return `https://bing.wallpaper.pics/v1?resolution=1920x1080&index=${idx}&r=${Date.now()}`;
+    return `https://bing.wdbyte.com/v1?resolution=1920x1080&index=${idx}&r=${Date.now()}`;
   },
   picsum: () => `https://picsum.photos/1920/1080?random=${Date.now()}`,
   custom: () => localImgs.length ? localImgs[Math.floor(Math.random()*localImgs.length)]
