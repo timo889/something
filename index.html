@@ -25,7 +25,6 @@ input[type=file]{display:none}
 <button id="wallBtn">🎨</button>
 <nav id="wallMenu">
   <button onclick="loadWall('bing')">Bing 随机日</button>
-  <button onclick="loadWall('unsplash')">Unsplash</button>
   <button onclick="loadWall('picsum')">Picsum</button>
   <button onclick="loadWall('custom')">我的图库</button>
   <label style="padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer">
@@ -50,7 +49,6 @@ const src = {
     const idx = Math.floor(Math.random()*8); // 0-7 随机历史日
     return `https://bing.wallpaper.pics/v1?resolution=1920x1080&index=${idx}&r=${Date.now()}`;
   },
-  unsplash: () => `https://source.unsplash.com/1920x1080?sig=${Math.random()}`,
   picsum: () => `https://picsum.photos/1920/1080?random=${Date.now()}`,
   custom: () => localImgs.length ? localImgs[Math.floor(Math.random()*localImgs.length)]
                                 : src.bing()
